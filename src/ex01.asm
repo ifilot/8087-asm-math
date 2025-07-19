@@ -17,6 +17,8 @@ start:
     fldpi                   ; load pi in ST(0)
     fld tword [real10]
     fmulp
+    fld st0
+    fmulp
 
     ; try to print pi to console
     lea di, [ascii]         ; set pointer to char buffer
@@ -26,15 +28,15 @@ start:
     int 0x21
     call printcrnl
 
-    lea si, [var01]
-    call printhexfp80
+    ;lea si, [var01]
+    ;call printhexfp80
 
-    lea si, [var02]
-    call printhexfp80
+    ;lea si, [var02]
+    ;call printhexfp80
 
-    mov dx, [exp10]
-    call printwordhex
-    call printcrnl
+    ;mov dx, [exp10]
+    ;call printwordhex
+    ;call printcrnl
 
     mov ah,0x09
     mov dx, msg
@@ -48,6 +50,8 @@ start:
     mov ax, 0x4c00
     int 21h
 
+;------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
 float_to_string:
     ; set up comparison routines
     fnstcw [old_cw]             ; save current control word
@@ -130,7 +134,61 @@ float_to_string:
 
     loop .frac_loop
 
+    mov byte [di], 'E'
+    inc di
+    mov ax, [exp10]
+    call itoa16
     mov byte [di], '$'
+    ret
+
+;------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
+itoa16:
+    push ax
+    push bx
+    push cx
+    push dx
+    push si
+
+    mov cx, 0              ; digit count
+    mov bx, 10             ; divisor for base 10
+
+    ; Handle sign
+    cmp ax, 0
+    jge .positive
+
+    ; If negative, output '-' and negate AX
+    mov byte [es:di], '-'
+    inc di
+    neg ax
+
+.positive:
+    xor dx, dx             ; clear high word for division
+    mov si, di             ; remember where to start writing digits in reverse
+
+.convert_loop:
+    xor dx, dx             ; DX must be 0 before DIV
+    div bx                 ; AX / 10 → quotient in AX, remainder in DL
+    push dx                ; save remainder (digit)
+    inc cx                 ; count digits
+    test ax, ax
+    jnz .convert_loop      ; repeat if quotient not zero
+
+.output_digits:
+    pop dx
+    add dl, '0'            ; convert digit to ASCII
+    mov [es:di], dl
+    inc di
+    loop .output_digits
+
+    ; Null-terminate string
+    mov byte [es:di], 0
+
+    pop si
+    pop dx
+    pop cx
+    pop bx
+    pop ax
     ret
 
 ;------------------------------------------------------------------------------
