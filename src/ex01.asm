@@ -2,6 +2,8 @@ CPU 8086
 
 org 100h
 
+jmp start
+
 start:
     mov ax, cs
     mov ds, ax
@@ -10,15 +12,11 @@ start:
     int 0x10
 
     finit                   ; initialize 8087
- 
     fldpi                   ; load pi in ST(0)
-    fstp tword [var01]
+    fstp tword [var01]      ; pop to memory
     fldpi                   ; load pi in ST(0)
-    fsqrt
-    fstp tword [var02]      ; pop result from the stack
 
     ; try to print pi to console
-    lea si, [var02]         ; set pointer to 80 bit value
     lea di, [ascii]         ; set pointer to char buffer
     call float_to_string    ; call routine
     mov ah,0x09
@@ -26,8 +24,12 @@ start:
     int 0x21
     call printcrnl
 
-    lea si, [var01]
-    call printhexfp80
+    ;lea si, [var01]
+    ;call printhexfp80
+
+    mov dx, [exp10]
+    call printwordhex
+    call printcrnl
 
     mov ah,0x09
     mov dx, msg
@@ -40,6 +42,91 @@ start:
     ; exit to DOS
     mov ax, 0x4c00
     int 21h
+
+float_to_string:
+    ; set up comparison routines
+    fnstcw [old_cw]             ; save current control word
+    mov ax, [old_cw]            ; load control word in ax
+    or ah, 0x0C                 ; set rounding bits to 11 (truncate)
+    mov [new_cw], ax            ; store updated control word
+    fldcw [new_cw]              ; load modified control word into FPU
+
+    ; Determine sign
+    fld st0                     ; create copy of ST(0)
+    fabs                        ; ST(0) = |val|
+    fcom st1                    ; ST(0) ? ST(1)
+    fstsw word [status_word]    ; load status word in memory
+    fwait
+    mov ax, [status_word]       ; move status word in ax
+    sahf                        ; store AH into flags
+    jb .negative                ; is negative?
+    jmp .cont                   ; if not, jump to integer part
+
+.negative:
+    mov byte [di], '-'
+    inc di
+
+.cont:
+    fstp st0                    ; ST(0) = abs(x); from here called x
+    fld st0                     ; ST(0) = x, ST(1) = x
+    fldlg2                      ; ST(0) = log10(2), ST(1) = x, ST(2) = x
+    fxch                        ; ST(0) = x, ST(1) = log10(2), ...
+    fyl2x                       ; ST(0) = log10(x), ST(1) = x
+    frndint                     ; ST(0) = floor(log10(x)), ST(1) = x
+    fist word [exp10]           ; store base-10 exponent (ok)
+    
+    ; Compute 10^exp10 via 2^(int + frac); first compute exp10 * log2(10)
+    fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
+    fmulp                       ; ST(0) = exp10 × log2(10), ST(1) = x
+
+    ; Split into int + frac
+    fld st0                     ; duplicate power
+    frndint                     ; ST(0) = int part
+    fsub st1, st0               ; ST(1) = frac = st1 - st0
+    fxch                        ; ST(0) = frac; ST(1) = int
+    f2xm1                       ; ST(0) = 2^frac - 1
+    fld1
+    faddp                       ; ST(0) = 2^frac; ST(1) = int
+    fscale                      ; ST(0) = 2^frac × 2^int = 10^exp10
+    fstp st1                    ; clean up integer part
+
+    ; Divide original x by 10^exp10 to get mantissa
+    fdivr                       ; ST(0) = x / 10^exp10 = mantissa
+
+    fld st0
+    frndint
+    fist word [temp_int]        ; store digit, pop int
+    mov ax, [temp_int]
+    add al, '0'
+    mov [di], al
+    inc di
+
+    fsub st1, st0
+    fstp st0                    ; pop, now ST(0) = new fraction
+    mov byte [di], '.'
+    inc di
+
+    mov cx, 10                  ; number of decimals
+.frac_loop:
+    fld tword [real10]          ; ST(0) = 10.0, ST(1) = fraction
+    fmul                        ; ST(0) = fraction * 10
+    fst st1                     ; update fraction
+    frndint                     ; truncate remainder
+    fld st0                     ; create copy
+    fistp word [temp_int]       ; store digit, pop int
+
+    mov ax, [temp_int]
+    add al, '0'
+    mov [di], al
+    inc di
+
+    fsub st1, st0
+    fstp st0                    ; pop, now ST(0) = new fraction
+
+    loop .frac_loop
+
+    mov byte [di], '$'
+    ret
 
 ;------------------------------------------------------------------------------
 ; ROUTINE PRINTHEXFP80
@@ -60,6 +147,22 @@ printhexfp80:
 .cont:
     loop .nextbyte
     call printcrnl
+    ret
+
+;------------------------------------------------------------------------------
+; ROUTINE PRINTWORDHEX
+; Print value stored in DX as 4 digit hex
+;
+; Garbles: DL, AX
+;------------------------------------------------------------------------------
+printwordhex:
+    push ax
+    push dx
+    mov dl, dh
+    call printhex
+    pop dx
+    call printhex
+    pop ax
     ret
 
 ;------------------------------------------------------------------------------
@@ -113,107 +216,17 @@ printcrnl:
     int 0x21
     ret
 
-;------------------------------------------------------------------------------
-; Convert 80-bit float to ASCII
-; Input:  [SI] = tword float
-; Output: [DI] = ASCII string, null-terminated with '$'
-; Clobbers: AX, BX, CX, DX, FPU stack
-;------------------------------------------------------------------------------
-float_to_string:
-    fnstcw [old_cw]             ; save current control word
-    mov ax, [old_cw]            ; load control word in ax
-    or ah, 0x0C                 ; set rounding bits to 11 (truncate)
-    mov [new_cw], ax            ; store updated control word
-    fldcw [new_cw]              ; load modified control word into FPU
-
-    fld tword [si]              ; ST(0) = floating point value in [si]
-    fld st0                     ; ST(1) = copy of ST(0)
-
-    ; Determine sign
-    fabs                        ; ST(0) = |val|
-    fcom st1                    ; ST(0) ? ST(1)
-    fstsw word [status_word]    ; load status word in memory
-    mov ax, [status_word]       ; move status word in ax
-    sahf                        ; store AH into flags
-    jb .negative                ; is negative?
-    jmp .integer_part           ; if not, jump to integer part
-
-.negative:
-    mov byte [di], '-'
-    inc di
-
-.integer_part:
-    fst st1                     ; ST(0) = |val|, ST(1) = |val|
-    frndint                     ; round ST(0) to integer
-    fsub st1, st0               ; ST(1) = original - int = fraction
-    fistp word [temp_int]       ; ST(0) = fraction
-
-    ; print integer
-    mov ax, [temp_int]
-    xor cx, cx
-    test ax, ax
-    jnz .store_digits
-    mov byte [di], '0'
-    inc di
-    jmp .after_integer
-
-.store_digits:
-    push ax
-.next_digit:
-    xor dx, dx
-    mov bx, 10
-    div bx
-    push dx
-    inc cx
-    test ax, ax
-    jnz .next_digit
-
-.print_digits:
-    pop dx
-    add dl, '0'
-    mov [di], dl
-    inc di
-    loop .print_digits
-    pop ax
-
-.after_integer:
-    mov byte [di], '.'
-    inc di
-
-    mov cx, 6                   ; number of decimals
-.frac_loop:
-    fld tword [real10]          ; ST(0) = 10.0, ST(1) = fraction
-    fmul                        ; ST(0) = fraction * 10
-    fst st1                     ; update fraction
-    frndint                     ; truncate remainder
-    fld st0                     ; create copy
-    fistp word [temp_int]       ; store digit, pop int
-
-    mov ax, [temp_int]
-    add al, '0'
-    mov [di], al
-    inc di
-
-    fsub st1, st0
-    fstp st0                    ; pop, now ST(0) = new fraction
-
-    loop .frac_loop
-
-    mov byte [di], '$'
-    fldcw [old_cw]              ; restore original mode
-.exit:
-    ret
-
 
 section .data
-    real10: dt 10.0
+    exp10       dw 0               ; will hold base-10 exponent (integer)
+    real10      dt 10.0
     msg: DB "Press any key to exit...$"
 
 section .bss
+    temp_int        resd 1        ; for significand digits
     ascii:          resb 20
     var01:          resb 10
     var02:          resb 10
-    temp_int:       resb 2
     status_word:    resb 2
     old_cw:         resb 2
     new_cw:         resb 2
