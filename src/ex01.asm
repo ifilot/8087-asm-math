@@ -15,6 +15,8 @@ start:
     fldpi                   ; load pi in ST(0)
     fstp tword [var01]      ; pop to memory
     fldpi                   ; load pi in ST(0)
+    fld tword [real10]
+    fmulp
 
     ; try to print pi to console
     lea di, [ascii]         ; set pointer to char buffer
@@ -24,8 +26,11 @@ start:
     int 0x21
     call printcrnl
 
-    ;lea si, [var01]
-    ;call printhexfp80
+    lea si, [var01]
+    call printhexfp80
+
+    lea si, [var02]
+    call printhexfp80
 
     mov dx, [exp10]
     call printwordhex
@@ -74,24 +79,24 @@ float_to_string:
     fyl2x                       ; ST(0) = log10(x), ST(1) = x
     frndint                     ; ST(0) = floor(log10(x)), ST(1) = x
     fist word [exp10]           ; store base-10 exponent (ok)
-    
+
     ; Compute 10^exp10 via 2^(int + frac); first compute exp10 * log2(10)
     fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
-    fmulp                       ; ST(0) = exp10 × log2(10), ST(1) = x
+    fmulp                       ; ST(0) = exp10 × log2(10) = power, ST(1) = x
 
     ; Split into int + frac
-    fld st0                     ; duplicate power
-    frndint                     ; ST(0) = int part
-    fsub st1, st0               ; ST(1) = frac = st1 - st0
+    fld st0                     ; ST(0) = power, ST(1) = power
+    frndint                     ; ST(0) = int part, ST(1) = power
+    fsub st1, st0               ; ST(1) = x - int = frac
     fxch                        ; ST(0) = frac; ST(1) = int
     f2xm1                       ; ST(0) = 2^frac - 1
     fld1
     faddp                       ; ST(0) = 2^frac; ST(1) = int
-    fscale                      ; ST(0) = 2^frac × 2^int = 10^exp10
+    fscale                      ; ST(0) = 2^frac × 2^int = 10^exp10    
     fstp st1                    ; clean up integer part
 
     ; Divide original x by 10^exp10 to get mantissa
-    fdivr                       ; ST(0) = x / 10^exp10 = mantissa
+    fdiv                       ; ST(0) = x / 10^exp10 = mantissa
 
     fld st0
     frndint
