@@ -12,10 +12,13 @@ CPU 8086
 ;
 ; Input: ST(0) - Floating point number
 ;        DI    - Pointer to char buffer
+;
+; Removes value from STACK
 ;------------------------------------------------------------------------------
 float_to_scientific:
     ; set up comparison routines
-    fnstcw [old_cw]             ; save current control word
+    fstcw [old_cw]              ; save current control word
+    fwait
     mov ax, [old_cw]            ; load control word in ax
     or ah, 0x0C                 ; set rounding bits to 11 (truncate)
     mov [new_cw], ax            ; store updated control word
@@ -24,9 +27,9 @@ float_to_scientific:
     fld st0                     ; create copy of ST(0)
     fabs                        ; ST(0) = |val|
     fcom st1                    ; ST(0) ? ST(1)
-    fstsw word [status_word]    ; load status word in memory
+    fstsw word [sw]             ; load status word in memory
     fwait                       ; wait until CPU has written the status
-    mov ax, [status_word]       ; move status word in ax
+    mov ax, [sw]                ; move status word in ax
     sahf                        ; store AH into flags
     jb .negative                ; is negative?
     mov byte [di], ' '          ; if positive, prepend by space
@@ -90,6 +93,7 @@ float_to_scientific:
     mov ax, [exp10]             ; load signed int (exp10) into AX
     call int16_to_expstring     ; call function to convert
     mov byte [di], '$'          ; write terminating symbol
+    fldcw [old_cw]              ; restore original mode
     fstp st0                    ; clear stack
     ret
 .temp_to_digit:

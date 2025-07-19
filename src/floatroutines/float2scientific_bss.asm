@@ -1,5 +1,5 @@
-temp_int        resd 1        ; for significand digits
+temp_int        resd 1          ; for significand digits
 exp10           resw 1
-status_word:    resb 2
-old_cw:         resb 2
-new_cw:         resb 2
+old_cw:         resw 1          ; control word
+new_cw:         resw 1          ; control word
+sw:             resw 1          ; status word

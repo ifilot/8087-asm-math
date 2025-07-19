@@ -8,6 +8,7 @@ jmp start
 ; include float routines (code)
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
+%include "floatroutines/exp.asm"
 
 start:
     mov ax, cs
@@ -19,26 +20,23 @@ start:
     ; set-up 8087 and load values
     finit                       ; initialize 8087
     fldpi                       ; load pi in ST(0)
-    lea di, [ascii]             ; set pointer to char buffer
-    call float_to_hex           ; call routine
-    mov ah,0x09
-    mov dx, ascii
-    int 0x21
-    call printcrnl
+    call printfloat
+
+    fld1
+    fld1
+    faddp
+    call exp
+    call printfloat
+
+    fld1
+    call printfloat
 
     fldpi                       ; load pi in ST(0)
     fld tword [real10]
     fmulp
     fld st0
     fmulp
-
-    ; try to print pi to console
-    lea di, [ascii]             ; set pointer to char buffer
-    call float_to_scientific    ; call routine
-    mov ah,0x09
-    mov dx, ascii
-    int 0x21
-    call printcrnl
+    call printfloat
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string
@@ -51,6 +49,19 @@ start:
     ; exit to DOS
     mov ax, 0x4c00
     int 21h
+
+;------------------------------------------------------------------------------
+; ROUTINE PRINTFLOAT
+; Print floating point value in ST(0) to screen. Pops ST(0) from stack.
+;------------------------------------------------------------------------------
+printfloat:
+    lea di, [ascii]             ; set pointer to char buffer
+    call float_to_scientific    ; call routine
+    mov ah,0x09
+    mov dx, ascii
+    int 0x21
+    call printcrnl
+    ret
 
 ;------------------------------------------------------------------------------
 ; ROUTINE PRINTWORDHEX

@@ -4,6 +4,8 @@
 ; Output the 80 bit representation of a floating point number.
 ; Input: ST(0) - Floating point number
 ;        DI    - Pointer to char buffer
+;
+; Removes value from STACK
 ;------------------------------------------------------------------------------
 float_to_hex:
     mov cx,10                       ; number of bytes
