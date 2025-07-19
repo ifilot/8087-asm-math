@@ -1,0 +1,1 @@
+temp_var:   resb 10
