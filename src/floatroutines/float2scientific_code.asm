@@ -16,6 +16,10 @@ CPU 8086
 ; Removes value from STACK
 ;------------------------------------------------------------------------------
 float_to_scientific:
+    push ax                     ; store register on stack
+    push bx
+    push cx
+    push dx
     ; set up comparison routines
     fstcw [old_cw]              ; save current control word
     fwait
@@ -95,6 +99,10 @@ float_to_scientific:
     mov byte [di], '$'          ; write terminating symbol
     fldcw [old_cw]              ; restore original mode
     fstp st0                    ; clear stack
+    pop dx
+    pop cx
+    pop bx
+    pop ax
     ret
 .temp_to_digit:
     mov ax, [temp_int]

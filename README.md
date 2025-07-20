@@ -30,3 +30,9 @@ The goal of this project is to serve as a practical reference for:
 make
 make rundosbox-x
 ```
+
+## List of programs
+
+| Example | Description                |
+|---------|----------------------------|
+| 01      | Exponential function       |
