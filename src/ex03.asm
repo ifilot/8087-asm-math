@@ -19,21 +19,15 @@ start:
 
     ; set-up 8087 and load values
     finit                       ; initialize 8087
-    mov cx, 10
-.loop:
-    mov ax, 10
-    sub ax, cx
+    fldpi
+    mov ax, 8
     mov [temp_int], ax
-    add ax, '0'
-    mov ah, 0x0E
-    int 0x10                    ; print parameter
-    mov ah, 0x0E
-    mov al, ' '                 ; print space
-    int 0x10
-    fild word [temp_int]        ; load parameter onto stack
-    call exp                    ; call exponential function
+    fild word [temp_int]
+    fwait
+    fdivp                       ; calculate pi/8
+    fptan                       ; tan(x) in ST(1), 1 in ST(0)
+    fxch                        ; ensure tan(x) is in ST(0)
     call printfloat             ; print result on the screen
-    loop .loop
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string

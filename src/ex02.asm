@@ -31,7 +31,7 @@ start:
     mov al, ' '                 ; print space
     int 0x10
     fild word [temp_int]        ; load parameter onto stack
-    call exp                    ; call exponential function
+    fsqrt
     call printfloat             ; print result on the screen
     loop .loop
 

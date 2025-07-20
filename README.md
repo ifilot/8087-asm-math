@@ -36,3 +36,5 @@ make rundosbox-x
 | Example | Description                |
 |---------|----------------------------|
 | 01      | Exponential function       |
+| 02      | Square root function       |
+| 03      | Tan function               |
