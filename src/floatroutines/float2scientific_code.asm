@@ -27,6 +27,7 @@ float_to_scientific:
     or ah, 0x0C                 ; set rounding bits to 11 (truncate)
     mov [new_cw], ax            ; store updated control word
     fldcw [new_cw]              ; load modified control word into FPU
+    fwait                       ; wait for FPU to process
     ; determine sign
     fld st0                     ; create copy of ST(0)
     fabs                        ; ST(0) = |val|
@@ -44,26 +45,27 @@ float_to_scientific:
     inc di
     ; construct 10-based exponent by calculating:
     ; exp10 = floor(log10(2) * log2(x))
-    fstp st1                    ; continue only with absolute value
+    fstp st1                    ; continue only with absolute value (from here called x)
     fld st0                     ; ST(0) = x, ST(1) = x
     fldlg2                      ; ST(0) = log10(2), ST(1) = x, ST(2) = x
-    fxch                        ; ST(0) = x, ST(1) = log10(2), ...
+    fxch                        ; ST(0) = x, ST(1) = log10(2), ST(2) = x
     fyl2x                       ; ST(0) = log10(x), ST(1) = x
     frndint                     ; ST(0) = floor(log10(x)), ST(1) = x
     fist word [exp10]           ; store base-10 exponent (ok)
+    fwait
     ; compute 10^exp10 via 2^(int + frac)
     ; first compute exp10 * log2(10)
     fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
     fmulp                       ; ST(0) = exp10 * log2(10) = power, ST(1) = x
     ; split into int + frac
-    fld st0                     ; ST(0) = power, ST(1) = power
-    frndint                     ; ST(0) = int part, ST(1) = power
+    fld st0                     ; ST(0) = power, ST(1) = power, ST(2) = x
+    frndint                     ; ST(0) = int part, ST(1) = power, ST(2) = x
     fsub st1, st0               ; ST(1) = x - int = frac
     fxch                        ; ST(0) = frac, ST(1) = int, ST(2) = x
     f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
-    fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ...
+    fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
     faddp                       ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
-    fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int    
+    fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int
     fstp st1                    ; ST(0) = 10^exp10, ST(1) = x
     ; divide original x by 10^exp10 to get mantissa
     fdiv                        ; ST(0) = x / 10^exp10 = mantissa
@@ -83,7 +85,7 @@ float_to_scientific:
     mov cx, 11                  ; number of decimals
 .frac_loop:
     fld tword [real10]          ; ST(0) = 10.0, ST(1) = mantissa
-    fmulp                       ; ST(0) = mantissa * 10
+    fmul                        ; ST(0) = mantissa * 10
     fst st1                     ; update mantissa
     frndint                     ; truncate remainder
     fist word [temp_int]        ; store digit
@@ -98,6 +100,7 @@ float_to_scientific:
     call int16_to_expstring     ; call function to convert
     mov byte [di], '$'          ; write terminating symbol
     fldcw [old_cw]              ; restore original mode
+    fwait
     fstp st0                    ; clear stack
     pop dx
     pop cx
@@ -157,7 +160,7 @@ int16_to_expstring:
     cmp cx, 1
     jne .print_digits       ; if more than 1 digit, skip padding
     mov dl, '0'             ; add leading zero before popping the only digit
-    mov [es:di], dl
+    mov [di], dl
     inc di
 .print_digits:
     pop dx

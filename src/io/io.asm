@@ -12,6 +12,18 @@ printfloat:
     ret
 
 ;------------------------------------------------------------------------------
+; ROUTINE PRINTFLOATHEX
+;------------------------------------------------------------------------------
+printfloathex:
+    lea di, [ascii]
+    call float_to_hex           ; print result on the screen
+    mov ah,0x09                 ; set routine
+    mov dx, ascii               ; set pointer to string
+    int 0x21                    ; print string
+    call printcrnl
+    ret
+
+;------------------------------------------------------------------------------
 ; ROUTINE PRINTWORDHEX
 ; Print value stored in DX as 4 digit hex
 ;

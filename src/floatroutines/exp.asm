@@ -10,12 +10,12 @@
 exp:
     ; set up comparison routines
     fnstcw [old_cw]             ; save current control word
-    fwait
+    fwait                       ; wait till written to memory
     mov ax, [old_cw]            ; load control word in ax
     or ah, 0x0C                 ; set rounding bits to 11 (truncate)
     mov [new_cw], ax            ; store updated control word
     fldcw [new_cw]              ; load modified control word into FPU
-
+    fwait                       ; wait for FPU to process
     fldl2e                      ; ST(0) = log2(e), ST(1) = x
     fmulp                       ; ST(0) = x * log2(e)
     fld st0                     ; duplicate x * log2(e)
@@ -28,4 +28,5 @@ exp:
     fscale                      ; ST(0) = 2^frac(x) * 2^int(x) = 2^x
     fstp st1                    ; clean up
     fldcw [old_cw]              ; restore original mode
+    fwait                       ; wait for FPU to process
     ret

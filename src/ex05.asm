@@ -19,22 +19,8 @@ start:
 
     ; set-up 8087 and load values
     finit                       ; initialize 8087
-    mov cx, 10
-.loop:
-    mov ax, 10
-    sub ax, cx
-    mov [temp_int], ax
-    add ax, '0'
-    mov ah, 0x0E
-    int 0x10                    ; print parameter
-    mov ah, 0x0E
-    mov al, ' '                 ; print space
-    int 0x10
-    fild word [temp_int]        ; load parameter onto stack
-    fwait
-    call exp                    ; call exponential function
+    fld1
     call printfloat             ; print result on the screen
-    loop .loop
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string
@@ -52,6 +38,7 @@ start:
 
 section .data
     msg: DB "Press any key to exit...$"
+    zero: dw 0
     %include "floatroutines/float2scientific_data.asm"
 
 section .bss
