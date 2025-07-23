@@ -1,6 +1,8 @@
 ;------------------------------------------------------------------------------
 ; ROUTINE PRINTFLOAT
-; Print floating point value in ST(0) to screen. Pops ST(0) from stack.
+; Print the float residing at the top of the FPU stack to the screen in
+; scientific notation.
+; **POPS THE STACK**
 ;------------------------------------------------------------------------------
 printfloat:
     lea di, [ascii]             ; set pointer to char buffer
@@ -13,6 +15,9 @@ printfloat:
 
 ;------------------------------------------------------------------------------
 ; ROUTINE PRINTFLOATHEX
+; Print the float residing at the top of the FPU stack to the screen in
+; hexadecimal notation. 
+; **POPS THE STACK**
 ;------------------------------------------------------------------------------
 printfloathex:
     lea di, [ascii]

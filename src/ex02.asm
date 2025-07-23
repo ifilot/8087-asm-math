@@ -9,6 +9,7 @@ jmp start
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
 %include "floatroutines/exp.asm"
+%include "floatroutines/printstacktop.asm"
 
 start:
     mov ax, cs
@@ -34,6 +35,8 @@ start:
     fsqrt
     call printfloat             ; print result on the screen
     loop .loop
+
+    call printstacktop
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string

@@ -1,5 +1,5 @@
 ;------------------------------------------------------------------------------
-; FLOAT_TO_HEX ROUTINE
+; ROUTINE FLOAT_TO_HEX
 ;
 ; Output the 80 bit representation of a floating point number.
 ; Input: ST(0) - Floating point number

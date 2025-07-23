@@ -9,6 +9,7 @@ jmp start
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
 %include "floatroutines/exp.asm"
+%include "floatroutines/printstacktop.asm"
 
 start:
     mov ax, cs
@@ -19,9 +20,11 @@ start:
 
     ; set-up 8087 and load values
     finit                       ; initialize 8087
+    call printstacktop
     fldpi
     lea di, [ascii]
     call float_to_hex           ; print result on the screen
+    call printstacktop
 
     mov ah,0x09                 ; set routine
     mov dx, ascii               ; set pointer to string

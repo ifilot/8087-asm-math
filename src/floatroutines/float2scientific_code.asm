@@ -1,11 +1,5 @@
 ;------------------------------------------------------------------------------
-;
-;------------------------------------------------------------------------------
-
-CPU 8086
-
-;------------------------------------------------------------------------------
-; FLOAT_TO_SCIENTIFIC ROUTINE
+; ROUTINE FLOAT_TO_SCIENTIFIC
 ;
 ; Converts a floating point number in ST(0) to a ASCII-string using scientific
 ; notation (e.g. 1.234567890e+12).
@@ -48,7 +42,7 @@ float_to_scientific:
     fstp st1                    ; continue only with absolute value (from here called x)
     fld st0                     ; ST(0) = x, ST(1) = x
     fldlg2                      ; ST(0) = log10(2), ST(1) = x, ST(2) = x
-    fxch                        ; ST(0) = x, ST(1) = log10(2), ST(2) = x
+    fxch st1                    ; ST(0) = x, ST(1) = log10(2), ST(2) = x
     fyl2x                       ; ST(0) = log10(x), ST(1) = x
     frndint                     ; ST(0) = floor(log10(x)), ST(1) = x
     fist word [exp10]           ; store base-10 exponent (ok)
@@ -56,38 +50,38 @@ float_to_scientific:
     ; compute 10^exp10 via 2^(int + frac)
     ; first compute exp10 * log2(10)
     fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
-    fmulp                       ; ST(0) = exp10 * log2(10) = power, ST(1) = x
+    fmulp st1                   ; ST(0) = exp10 * log2(10) = power, ST(1) = x
     ; split into int + frac
     fld st0                     ; ST(0) = power, ST(1) = power, ST(2) = x
     frndint                     ; ST(0) = int part, ST(1) = power, ST(2) = x
     fsub st1, st0               ; ST(1) = x - int = frac
-    fxch                        ; ST(0) = frac, ST(1) = int, ST(2) = x
+    fxch st1                    ; ST(0) = frac, ST(1) = int, ST(2) = x
     f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
     fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
-    faddp                       ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
-    fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int
+    faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
+    fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int, ST(2) = x
     fstp st1                    ; ST(0) = 10^exp10, ST(1) = x
-    ; divide original x by 10^exp10 to get mantissa
-    fdiv                        ; ST(0) = x / 10^exp10 = mantissa
-    fstp st1                    ; remove ST(1)
+    ; divide original x by 10^exp10 to get mantissa, implicitly pops the stack
+    fdivp st1, st0              ; ST(0) = x / 10^exp10 = mantissa (ST1 <- ST1 / ST0, then pop)
     ; here, we only have the mantissa on the stack, this mantissa lies between
     ; [1, 10), so we can safely extract the leading digit and store that
     ; in the string
-    fld st0                     ; create copy of mantissa for first digit
-    frndint                     ; truncate to get first digit
+    fld st0                     ; ST(0) = mantissa, ST(1) = mantissa
+    frndint                     ; ST(0) = floor(mantissa), ST(1) = mantissa
     fist word [temp_int]        ; store digit
     fwait                       ; wait needed because memory write
     call .temp_to_digit         ; place the extracted digit in the string
-    fsubp st1, st0              ; subtract integer from mantissa and pop
+    fsubp st1, st0              ; ST(0) = mantissa (one decimal shifted)
     mov byte [di], '.'          ; insert decimal point
     inc di                      ; increment pointer
     ; here we proceed by extracting 11 decimals
-    mov cx, 11                  ; number of decimals
+    mov cx, 5                   ; number of decimals
 .frac_loop:
+    call printstacktop
     fld tword [real10]          ; ST(0) = 10.0, ST(1) = mantissa
-    fmul                        ; ST(0) = mantissa * 10
-    fst st1                     ; update mantissa
-    frndint                     ; truncate remainder
+    fmulp st1                   ; ST(0) = mantissa * 10
+    fld st0                     ; ST(0) = mantissa * 10, ST(1) = mantissa * 10
+    frndint                     ; ST(0) = floor(mantissa * 10), ST(1) = mantissa * 10
     fist word [temp_int]        ; store digit
     fwait
     call .temp_to_digit
@@ -115,7 +109,7 @@ float_to_scientific:
     ret
 
 ;------------------------------------------------------------------------------
-; INT16_TO_EXPSTRING ROUTINE
+; ROUTINE INT16_TO_EXPSTRING
 ;
 ; Converts a 16 bit signed value in AX to a formatted string used as the
 ; trailing (exponent) part in scientific notation. The formatted string is

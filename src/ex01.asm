@@ -9,6 +9,7 @@ jmp start
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
 %include "floatroutines/exp.asm"
+%include "floatroutines/printstacktop.asm"
 
 start:
     mov ax, cs
