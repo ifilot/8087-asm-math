@@ -5,12 +5,6 @@ org 100h
 ; always start with a jump to the start of the programs
 jmp start
 
-; include float routines (code)
-%include "floatroutines/float2scientific_code.asm"
-%include "floatroutines/float2hex_code.asm"
-%include "floatroutines/exp.asm"
-%include "floatroutines/printstacktop.asm"
-
 start:
     mov ax, cs
     mov ds, ax
@@ -37,12 +31,18 @@ start:
 
 %include "io/io.asm"
 
+; include float routines (code)
+%include "floatroutines/float2scientific_code.asm"
+%include "floatroutines/float2hex_code.asm"
+%include "floatroutines/exp.asm"
+%include "floatroutines/printstacktop.asm"
+
 section .data
     msg: DB "Press any key to exit...$"
     zero: dw 0
     %include "floatroutines/float2scientific_data.asm"
 
 section .bss
-    ascii:          resb 20
+    ascii:          resb 32
     %include "floatroutines/float2hex_bss.asm"
     %include "floatroutines/float2scientific_bss.asm"

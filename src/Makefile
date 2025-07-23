@@ -13,7 +13,7 @@ ex03.com: ex03.asm floatroutines/*.asm
 ex04.com: ex04.asm floatroutines/*.asm
 	nasm -w+error -o ex04.com ex04.asm
 
-ex05.com: ex05.asm floatroutines/*.asm
+ex05.com: ex05.asm floatroutines/*.asm io/io.asm
 	nasm -w+error -o ex05.com ex05.asm
 
 # run in dosbox-x (more accurate representation of 8086 processor)

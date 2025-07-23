@@ -14,6 +14,7 @@ printstacktop:
     push bx
     push cx
     push dx
+    fwait
     fstsw [sw]          ; Store the FPU Status Word into AX
     fwait
     mov dx, [sw]

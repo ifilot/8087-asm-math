@@ -3,14 +3,18 @@
 ; Print the float residing at the top of the FPU stack to the screen in
 ; scientific notation.
 ; **POPS THE STACK**
+;
+; Garbles: AX, DX
 ;------------------------------------------------------------------------------
 printfloat:
+    push di
     lea di, [ascii]             ; set pointer to char buffer
     call float_to_scientific    ; call routine
     mov ah,0x09
     mov dx, ascii
     int 0x21
     call printcrnl
+    pop di
     ret
 
 ;------------------------------------------------------------------------------
@@ -18,14 +22,18 @@ printfloat:
 ; Print the float residing at the top of the FPU stack to the screen in
 ; hexadecimal notation. 
 ; **POPS THE STACK**
+;
+; Garbles: AX, DX
 ;------------------------------------------------------------------------------
 printfloathex:
-    lea di, [ascii]
+    push di
+    lea di, [hex]
     call float_to_hex           ; print result on the screen
     mov ah,0x09                 ; set routine
-    mov dx, ascii               ; set pointer to string
+    mov dx, hex                 ; set pointer to string
     int 0x21                    ; print string
     call printcrnl
+    pop di
     ret
 
 ;------------------------------------------------------------------------------

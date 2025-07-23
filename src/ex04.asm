@@ -22,13 +22,10 @@ start:
     finit                       ; initialize 8087
     call printstacktop
     fldpi
-    lea di, [ascii]
-    call float_to_hex           ; print result on the screen
+    call printfloathex          ; print result on the screen
+    fldlg2
+    call printfloathex          ; print result on the screen
     call printstacktop
-
-    mov ah,0x09                 ; set routine
-    mov dx, ascii               ; set pointer to string
-    int 0x21                    ; print string
 
     ; wait for keypress
     mov ah,0x08

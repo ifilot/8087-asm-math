@@ -8,8 +8,10 @@
 ; Removes value from STACK
 ;------------------------------------------------------------------------------
 float_to_hex:
+    push si
     mov cx,10                       ; number of bytes
-    fstp tword [temp_var]           ; store value in memory
+    fwait
+    fstp tword [temp_var]           ; store value in memory and pop
     fwait
     lea si, [temp_var]              ; set source index
 .nextbyte:
@@ -22,7 +24,9 @@ float_to_hex:
 .cont:
     loop .nextbyte
     mov byte [di], '$'
+    pop si
     ret
+   
 ; convert byte in AL to 2-digit HEX and store in DI
 .storehex:
     mov ah, al
@@ -35,6 +39,7 @@ float_to_hex:
     and al, 0x0f
     call .storenibble
     ret
+
 ; convert nibble in AL to HEX and store in DI
 .storenibble:
     cmp al, 10
