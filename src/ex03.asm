@@ -19,15 +19,54 @@ start:
 
     ; set-up 8087 and load values
     finit                       ; initialize 8087
+    fwait
     fldpi
     mov ax, 8
     mov [temp_int], ax
+    fwait
     fild word [temp_int]
     fwait
-    fdivp                       ; calculate pi/8
-    fptan                       ; tan(x) in ST(1), 1 in ST(0)
-    fxch                        ; ensure tan(x) is in ST(0)
+    fdivp st1, st0              ; ST(0) = pi / 8 (ST(1) <- ST(1) / ST(0), then pop)
+    fwait
+    fld st0
+    fwait
+    call printfloathex
+    fld st0
+    fwait
+    call printfloat
+    fwait
+    fptan                       ; apply y/x = tan(theta); x in ST(0); y in ST(1)
+    fwait
+    fdivp st1, st0              ; ST(0) = tan(theta) (ST(1) <- ST(1) / ST(0), then pop)
+    fwait
+    fld st0
+    fwait
+    call printfloathex
+    fld st0
+    fwait
     call printfloat             ; print result on the screen
+    fst st0
+    fwait
+    fldpi
+    mov ax, 128
+    mov [temp_int], ax
+    fwait
+    fild word [temp_int]
+    fwait
+    fdivp st1, st0              ; ST(0) = pi / 8 (ST(1) <- ST(1) / ST(0), then pop)
+    fwait
+    fptan                       ; apply y/x = tan(theta); x in ST(0); y in ST(1)
+    fwait
+    fdivp st1, st0              ; ST(0) = tan(theta) (ST(1) <- ST(1) / ST(0), then pop)
+    fwait
+    fld st0
+    fwait
+    call printfloathex
+    fld st0
+    fwait
+    call printfloat             ; print result on the screen
+    fst st0
+
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string

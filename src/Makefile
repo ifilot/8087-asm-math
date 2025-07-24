@@ -1,21 +1,39 @@
-all: ex01.com ex02.com ex03.com ex04.com ex05.com
+# Find all ex??.asm files and convert to .com targets
+ASM_FILES = $(wildcard ex??.asm)
+PROGRAMS = $(ASM_FILES:.asm=.com)
 
-# compile instructions
-ex01.com: ex01.asm floatroutines/*.asm
-	nasm -w+error -o ex01.com ex01.asm
+# Default target
+all: $(PROGRAMS)
 
-ex02.com: ex02.asm floatroutines/*.asm
-	nasm -w+error -o ex02.com ex02.asm
+# Tools and flags
+NASM = nasm
+NASMFLAGS = -w+error
+PREPROCESSOR = python3 ../scripts/preprocessor.py
 
-ex03.com: ex03.asm floatroutines/*.asm
-	nasm -w+error -o ex03.com ex03.asm
+# Preprocessing: convert all .spp files to .asm in floatroutines/
+FLOAT_SPP = $(wildcard floatroutines/*.spp)
+FLOAT_ASM = $(FLOAT_SPP:.spp=.asm)
 
-ex04.com: ex04.asm floatroutines/*.asm
-	nasm -w+error -o ex04.com ex04.asm
+# Rule to generate .asm files from .spp using preprocessor.py
+floatroutines/%.asm: floatroutines/%.spp ../scripts/preprocessor.py
+	$(PREPROCESSOR) $< $@
 
-ex05.com: ex05.asm floatroutines/*.asm io/io.asm
-	nasm -w+error -o ex05.com ex05.asm
+# Make all floatroutines .asm files before building any .com
+# Each .com file depends on all of them
+COMMON_SRC = $(FLOAT_ASM)
 
-# run in dosbox-x (more accurate representation of 8086 processor)
+# Pattern rule for building .com from .asm
+%.com: %.asm $(COMMON_SRC)
+	$(NASM) $(NASMFLAGS) -o $@ $<
+
+# Special case for ex05.com (requires io/io.asm too)
+ex05.com: ex05.asm $(COMMON_SRC) io/io.asm
+	$(NASM) $(NASMFLAGS) -o $@ ex05.asm
+
+# Run target
 run: $(FILE).com
 	dosbox-x -conf dosbox-x.conf -exit $(FILE).com
+
+# Optional: clean target
+clean:
+	rm -f *.com $(FLOAT_ASM)

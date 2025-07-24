@@ -32,11 +32,11 @@ start:
     mov al, ' '                 ; print space
     int 0x10
     fild word [temp_int]        ; load parameter onto stack
+    fwait
     fsqrt
+    fwait
     call printfloat             ; print result on the screen
     loop .loop
-
-    call printstacktop
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string

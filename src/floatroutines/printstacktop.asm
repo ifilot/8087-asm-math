@@ -14,9 +14,7 @@ printstacktop:
     push bx
     push cx
     push dx
-    fwait
     fstsw [sw]          ; Store the FPU Status Word into AX
-    fwait
     mov dx, [sw]
     mov dl, dh          ; Move DH into DL (we only care about high byte)
     shr dl, 1

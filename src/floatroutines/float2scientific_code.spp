@@ -15,25 +15,17 @@ float_to_scientific:
     push cx
     push dx
     ; set up comparison routines
-    fwait
     fstcw [old_cw]              ; save current control word
-    fwait
     mov ax, [old_cw]            ; load control word in ax
     and ah, 0xF3                ; clear bits 2 and 3 (bits 10–11)
     or  ah, 0x04                ; set round-down mode
     mov [new_cw], ax            ; store updated control word
-    fwait
     fldcw [new_cw]              ; load modified control word into FPU
     ; determine sign
-    fwait
     fld st0                     ; create copy of ST(0)
-    fwait
     fabs                        ; ST(0) = |val|
-    fwait
     fcom st1                    ; ST(0) ? ST(1)
-    fwait
     fstsw word [sw]             ; load status word in memory
-    fwait
     mov ax, [sw]                ; move status word in ax
     sahf                        ; store AH into flags
     jb .negative                ; is negative?
@@ -45,75 +37,47 @@ float_to_scientific:
     inc di
     ; construct 10-based exponent by calculating:
     ; exp10 = floor(log10(2) * log2(x))
-    fwait
     fstp st1                    ; continue only with absolute value (from here called x)
-    fwait
     fldlg2                      ; ST(0) = log10(2), ST(1) = x
-    fwait
     fld st1                     ; ST(0) = x, ST(1) = log10(2), ST(2) = x
-    fwait
     fyl2x                       ; ST(0) = log10(x), ST(1) = x
-    fwait
     frndint                     ; ST(0) = floor(log10(x)), ST(1) = x
-    fwait
-    fist word [exp10]           ; store base-10 exponent
+    fist word [exp10]           ; store base-10 exponent (ok)
     ; compute 10^exp10 via 2^(int + frac)
     ; first compute exp10 * log2(10)
-    fwait
     fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
-    fwait
     fmulp st1                   ; ST(0) = exp10 * log2(10) = power, ST(1) = x
     ; split into int + frac
-    fwait
     fld st0                     ; ST(0) = power, ST(1) = power, ST(2) = x
-    fwait
     frndint                     ; ST(0) = int part, ST(1) = power, ST(2) = x
-    fwait
     fsub st1, st0               ; ST(1) = x - int = frac
-    fwait
     fxch st1                    ; ST(0) = frac, ST(1) = int, ST(2) = x
-    fwait
     f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
     fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
-    fwait
     faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
-    fwait
     fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int, ST(2) = x
-    fwait
     fstp st1                    ; ST(0) = 10^exp10, ST(1) = x
-    fwait
     ; divide original x by 10^exp10 to get mantissa, implicitly pops the stack
-    fwait
     fdivp st1, st0              ; ST(0) = x / 10^exp10 = mantissa (ST1 <- ST1 / ST0, then pop)
     ; here, we only have the mantissa on the stack, this mantissa lies between
     ; [1, 10), so we can safely extract the leading digit and store that
     ; in the string
-    fwait
     fld st0                     ; ST(0) = mantissa, ST(1) = mantissa
-    fwait
     frndint                     ; ST(0) = floor(mantissa), ST(1) = mantissa
-    fwait
     fist word [temp_int]        ; store digit
     call .temp_to_digit         ; place the extracted digit in the string
-    fwait
     fsubp st1, st0              ; ST(0) = mantissa (one decimal shifted)
     mov byte [di], '.'          ; insert decimal point
     inc di                      ; increment pointer
     ; here we proceed by extracting 11 decimals
     mov cx, 11                  ; number of decimals
 .frac_loop:
-    fwait
     fld tword [real10]          ; ST(0) = 10.0, ST(1) = mantissa
-    fwait
     fmulp st1                   ; ST(0) = mantissa * 10
-    fwait
     fld st0                     ; ST(0) = mantissa * 10, ST(1) = mantissa * 10
-    fwait
     frndint                     ; ST(0) = floor(mantissa * 10), ST(1) = mantissa * 10
-    fwait
     fist word [temp_int]        ; store digit
     call .temp_to_digit
-    fwait
     fsubp st1, st0              ; subtract integer from mantissa and pop
     loop .frac_loop             ; continue extracting digits
     ; all decimals have been written, now write exponent part
@@ -122,11 +86,8 @@ float_to_scientific:
     mov ax, [exp10]             ; load signed int (exp10) into AX
     call int16_to_expstring     ; call function to convert
     mov byte [di], '$'          ; write terminating symbol
-    fwait
     fldcw [old_cw]              ; restore original mode
-    fwait
     fstp st0                    ; clear stack
-    fwait
     pop dx
     pop cx
     pop bx
