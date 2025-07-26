@@ -7,9 +7,11 @@ jmp start
 
 ; include float routines (code)
 %include "floatroutines/floatrounding.asm"
+%include "floatroutines/floatisneg.asm"
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
 %include "floatroutines/exp.asm"
+%include "floatroutines/printstacktop.asm"
 
 start:
     mov ax, cs
@@ -21,6 +23,20 @@ start:
     ; set-up 8087 and load values
     finit                       ; initialize 8087
     fwait
+
+    ; TEST 1 : construct pi/8 and print value
+    fldl2t
+    fwait
+    fld st0
+    fwait
+    call printfloathex
+    fwait   
+    fld st0
+    fwait
+    call printfloat
+    fwait
+
+    ; TEST 1 : construct pi/8 and print value
     fldpi
     mov ax, 8
     mov [temp_int], ax
@@ -32,11 +48,17 @@ start:
     fld st0
     fwait
     call printfloathex
-    fwait
+    fwait   
     fld st0
     fwait
     call printfloat
     fwait
+
+    fld tword [debug]
+    call printfloat
+    fwait
+
+    ; TEST 2 :  take tan of pi/8
     fptan                       ; apply y/x = tan(theta); x in ST(0); y in ST(1)
     fwait
     fdivp st1, st0              ; ST(0) = tan(theta) (ST(1) <- ST(1) / ST(0), then pop)
@@ -51,6 +73,8 @@ start:
     fwait
     fst st0
     fwait
+
+    ; TEST 3 : calculate pi / 128
     fldpi
     mov ax, 128
     mov [temp_int], ax

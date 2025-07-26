@@ -17,13 +17,7 @@ float_to_scientific:
     ; set up comparison routines
     fstcw [old_cw]                  ; save current control word
     call floatrounding_set_floor
-    ; determine sign
-    fld st0                         ; create copy of ST(0)
-    fabs                            ; ST(0) = |val|
-    fcom st1                        ; ST(0) ? ST(1)
-    fstsw word [sw]                 ; load status word in memory
-    mov ax, [sw]                    ; move status word in ax
-    sahf                            ; store AH into flags
+    call float_is_neg
     jb .negative                    ; is negative?
     mov byte [di], ' '              ; if positive, prepend by space
     jmp .cont                       ; if not, jump to integer part
@@ -33,7 +27,6 @@ float_to_scientific:
     inc di
     ; construct 10-based exponent by calculating:
     ; exp10 = floor(log10(2) * log2(x))
-    fstp st1                    ; continue only with absolute value (from here called x)
     fldlg2                      ; ST(0) = log10(2), ST(1) = x
     fld st1                     ; ST(0) = x, ST(1) = log10(2), ST(2) = x
     fyl2x                       ; ST(0) = log10(x), ST(1) = x
@@ -46,33 +39,26 @@ float_to_scientific:
     ; split into int + frac
     call floatrounding_nearest  ; set rounding to nearest
     fld st0                     ; ST(0) = power, ST(1) = power, ST(2) = x
-    frndint                     ; ST(0) = int(power), ST(1) = power, ST(2) = x
+    frndint
+    fistp word [temp_int]       ; recommended procedure to store as word and recall
+    fild word [temp_int]        ; ST(0) = int(power), ST(1) = power, ST(2) = x
     fsub st1, st0               ; ST(1) = power - int(power) = frac
     fxch st1                    ; ST(0) = frac, ST(1) = int, ST(2) = x
     ; determine sign of fraction
-    fld st0                     ; ST(0) = frac, ST(1) = frac, ST(1) = int, ST(2) = x
-    fabs                        ; ST(0) = |frac|, ST(1) = frac, ST(1) = int, ST(2) = x
-    fcom st1                    ; ST(0) ? ST(1)
-    fstsw word [sw]             ; load status word in memory
-    mov ax, [sw]                ; move status word in ax
-    sahf                        ; store AH into flags
-    jb .fracpos                 ; is negative?
-.fracneg:
-    fstp st1                    ; continue with absolute value of fraction
+    call float_is_neg           ; CF contains whether float was negative
+    fabs                        ; always take absolute value
     f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
     fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
     faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
+    jnb .cont2                  ; is positive?
+.fracneg:
     fld1                        ; ST(0) = 1, ST(1) = 2^frac, ST(2) = int, ST(3) = x
     fdivrp st1                  ; ST(0) = 2^(-frac), ST(1) = int, ST(2) = x
-    jmp cont2
-.fracpos:
-    fstp st1                    ; continue with absolute value of fraction
-    f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
-    fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
-    faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
-cont2:
+.cont2:
     fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int, ST(2) = x
     fstp st1                    ; ST(0) = 10^exp10, ST(1) = x
+    fld st0
+    fstp tword [debug]
     ; divide original x by 10^exp10 to get mantissa, implicitly pops the stack
     fdivp st1, st0              ; ST(0) = x / 10^exp10 = mantissa (ST1 <- ST1 / ST0, then pop)
     ; here, we only have the mantissa on the stack, this mantissa lies between

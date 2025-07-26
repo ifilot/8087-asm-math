@@ -29,6 +29,7 @@ exp:
     fxch                        ; ST(0) = frac(x), ST(1) = int(x)
     fwait
     f2xm1                       ; ST(0) = 2^frac(x) - 1
+    fwait
     fld1
     fwait
     faddp                       ; ST(0) = 2^frac(x)

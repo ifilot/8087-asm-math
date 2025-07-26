@@ -6,11 +6,12 @@ FPU_INSTRUCTIONS = {
     "fptan", "fpatan", "fyl2x", "fyl2xp1", "f2xm1", "fcom", "fcomp",
     "fcompp", "fld", "fst", "fstp", "fxch", "fninit", "finit", "fclex", "fnclex", "fwait", "fincstp",
     "fdecstp", "ffree", "fnstsw", "fstsw", "fnstcw", "fldcw", "fstcw", "fstenv", "fldenv", "fsave",
-    "frstor", "fnop", "fist", "fldl2t", "fmulp", "faddp", "fdivp", "fyl2x", "fsubp"
+    "frstor", "fnop", "fist", "fldl2t", "fmulp", "faddp", "fdivp", "fyl2x", "fsubp", "fld1", "fdivrp",
+    "fistp", "fild"
 }
 
 FPU_MEM_WRITE_INSTRUCTIONS = {
-    "fst", "fstp", "fstenv", "fsave", "fstcw", "fstsw"
+    "fst", "fstp", "fstenv", "fsave", "fstcw", "fstsw", "fistp"
 }
 
 def preprocess_8087(filename_in, filename_out):

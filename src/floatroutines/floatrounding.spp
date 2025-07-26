@@ -5,13 +5,11 @@
 ;------------------------------------------------------------------------------
 floatrounding_set_floor:
     fstcw [old_cw]              ; save current control word
-    fwait
     mov ax, [old_cw]            ; load control word in ax
     and ah, 0xF3                ; clear bits 2 and 3 (bits 10–11)
     or  ah, 0x04                ; set round-down mode
     mov [new_cw], ax            ; store updated control word
     fldcw [new_cw]              ; load modified control word into FPU
-    fwait
     ret
 
 ;------------------------------------------------------------------------------
@@ -21,12 +19,10 @@ floatrounding_set_floor:
 ;------------------------------------------------------------------------------
 floatrounding_nearest:
     fstcw [old_cw]              ; save current control word
-    fwait
     mov ax, [old_cw]            ; load control word in ax
     and ah, 0xF3                ; clear bits 2 and 3 (bits 10–11)
     mov [new_cw], ax            ; store updated control word
     fldcw [new_cw]              ; load modified control word into FPU
-    fwait
     ret
 
 ;------------------------------------------------------------------------------
@@ -36,10 +32,8 @@ floatrounding_nearest:
 ;------------------------------------------------------------------------------
 floatrounding_truncate:
     fstcw [old_cw]              ; save current control word
-    fwait
     mov ax, [old_cw]            ; load control word in ax
     or ah, 0x0C                 ; set bits 2 and 3 (bits 10–11)
     mov [new_cw], ax            ; store updated control word
     fldcw [new_cw]              ; load modified control word into FPU
-    fwait
     ret

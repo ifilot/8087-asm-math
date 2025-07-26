@@ -1,0 +1,24 @@
+;------------------------------------------------------------------------------
+; ROUTINE FLOAT_IS_NEG
+;
+; Input: ST(0) - floating point number
+;
+; Two copies of ST(0) are being made and set such that ST(0) is the original
+; value and ST(1) is its absolute value. If ST(0) is a negative number, its
+; comparison with ST(1) will result in the carry flag in the status word
+; will be set; which is transferred to the flag register.
+; ST(0) < ST(1) --> CF = 1.
+; Whether ST(0) was negative can thus be probed with jb.
+;
+; Retains stack
+;------------------------------------------------------------------------------
+float_is_neg:
+    fld st0                         ; create copy
+    fabs                            ; take absolute value
+    fxch st1                        ; swap st0 and st1, ST(0) = x, ST(1) = |x|
+    fcom                            ; x < |x|?
+    fstsw word [sw]                 ; load status word in memory
+    mov ax, [sw]                    ; move status word in ax
+    sahf                            ; store AH into flags
+    fstp st1                        ; put x in ST(1) and pop ST(0)
+    ret
