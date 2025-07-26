@@ -6,6 +6,7 @@ org 100h
 jmp start
 
 ; include float routines (code)
+%include "floatroutines/floatrounding.asm"
 %include "floatroutines/float2scientific_code.asm"
 %include "floatroutines/float2hex_code.asm"
 %include "floatroutines/exp.asm"
@@ -31,6 +32,7 @@ start:
     fld st0
     fwait
     call printfloathex
+    fwait
     fld st0
     fwait
     call printfloat
@@ -42,9 +44,11 @@ start:
     fld st0
     fwait
     call printfloathex
+    fwait
     fld st0
     fwait
     call printfloat             ; print result on the screen
+    fwait
     fst st0
     fwait
     fldpi
@@ -62,11 +66,12 @@ start:
     fld st0
     fwait
     call printfloathex
+    fwait
     fld st0
     fwait
     call printfloat             ; print result on the screen
+    fwait
     fst st0
-
 
     mov ah,0x09                 ; set routine
     mov dx, msg                 ; set pointer to string

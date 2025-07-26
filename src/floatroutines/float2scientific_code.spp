@@ -10,27 +10,23 @@
 ; Removes value from STACK
 ;------------------------------------------------------------------------------
 float_to_scientific:
-    push ax                     ; store register on stack
+    push ax                         ; store register on stack
     push bx
     push cx
     push dx
     ; set up comparison routines
-    fstcw [old_cw]              ; save current control word
-    mov ax, [old_cw]            ; load control word in ax
-    and ah, 0xF3                ; clear bits 2 and 3 (bits 10–11)
-    or  ah, 0x04                ; set round-down mode
-    mov [new_cw], ax            ; store updated control word
-    fldcw [new_cw]              ; load modified control word into FPU
+    fstcw [old_cw]                  ; save current control word
+    call floatrounding_set_floor
     ; determine sign
-    fld st0                     ; create copy of ST(0)
-    fabs                        ; ST(0) = |val|
-    fcom st1                    ; ST(0) ? ST(1)
-    fstsw word [sw]             ; load status word in memory
-    mov ax, [sw]                ; move status word in ax
-    sahf                        ; store AH into flags
-    jb .negative                ; is negative?
-    mov byte [di], ' '          ; if positive, prepend by space
-    jmp .cont                   ; if not, jump to integer part
+    fld st0                         ; create copy of ST(0)
+    fabs                            ; ST(0) = |val|
+    fcom st1                        ; ST(0) ? ST(1)
+    fstsw word [sw]                 ; load status word in memory
+    mov ax, [sw]                    ; move status word in ax
+    sahf                            ; store AH into flags
+    jb .negative                    ; is negative?
+    mov byte [di], ' '              ; if positive, prepend by space
+    jmp .cont                       ; if not, jump to integer part
 .negative:
     mov byte [di], '-'
 .cont:
@@ -48,13 +44,33 @@ float_to_scientific:
     fldl2t                      ; ST(0) = log2(10), ST(1) = exp10, ST(2) = x
     fmulp st1                   ; ST(0) = exp10 * log2(10) = power, ST(1) = x
     ; split into int + frac
+    call floatrounding_nearest  ; set rounding to nearest
     fld st0                     ; ST(0) = power, ST(1) = power, ST(2) = x
-    frndint                     ; ST(0) = int part, ST(1) = power, ST(2) = x
-    fsub st1, st0               ; ST(1) = x - int = frac
+    frndint                     ; ST(0) = int(power), ST(1) = power, ST(2) = x
+    fsub st1, st0               ; ST(1) = power - int(power) = frac
     fxch st1                    ; ST(0) = frac, ST(1) = int, ST(2) = x
+    ; determine sign of fraction
+    fld st0                     ; ST(0) = frac, ST(1) = frac, ST(1) = int, ST(2) = x
+    fabs                        ; ST(0) = |frac|, ST(1) = frac, ST(1) = int, ST(2) = x
+    fcom st1                    ; ST(0) ? ST(1)
+    fstsw word [sw]             ; load status word in memory
+    mov ax, [sw]                ; move status word in ax
+    sahf                        ; store AH into flags
+    jb .fracpos                 ; is negative?
+.fracneg:
+    fstp st1                    ; continue with absolute value of fraction
     f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
     fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
     faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
+    fld1                        ; ST(0) = 1, ST(1) = 2^frac, ST(2) = int, ST(3) = x
+    fdivrp st1                  ; ST(0) = 2^(-frac), ST(1) = int, ST(2) = x
+    jmp cont2
+.fracpos:
+    fstp st1                    ; continue with absolute value of fraction
+    f2xm1                       ; ST(0) = 2^frac - 1, ST(1) = int, ST(2) = x
+    fld1                        ; ST(0) = 1, ST(1) = 2^frac - 1, ..., ST(2) = int, ST(3) = x
+    faddp st1,st0               ; ST(0) = 2^frac, ST(1) = int, ST(2) = x
+cont2:
     fscale                      ; ST(0) = 2^frac * 2^int = 10^exp10, ST(1) = int, ST(2) = x
     fstp st1                    ; ST(0) = 10^exp10, ST(1) = x
     ; divide original x by 10^exp10 to get mantissa, implicitly pops the stack
@@ -62,6 +78,7 @@ float_to_scientific:
     ; here, we only have the mantissa on the stack, this mantissa lies between
     ; [1, 10), so we can safely extract the leading digit and store that
     ; in the string
+    call floatrounding_set_floor
     fld st0                     ; ST(0) = mantissa, ST(1) = mantissa
     frndint                     ; ST(0) = floor(mantissa), ST(1) = mantissa
     fist word [temp_int]        ; store digit
